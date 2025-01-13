@@ -3,7 +3,6 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const blacklisttokenModel = require('../models/blacklisttoken.model');
 
-
 // Registration functionality
 
 module.exports.register = async (req, res) => {
@@ -21,8 +20,10 @@ module.exports.register = async (req, res) => {
         await newUser.save();
 
         const token = jwt.sign({id: newUser.id, }, process.env.JWT_SECRET, {expiresIn: '1h'})
+
         res.cookie('token', token);
-        res.status(200).json({msg: 'New user created successfully', userDetail: newUser})
+        delete user._doc.password;
+        res.status(200).json({token: token , userDetail: newUser})
     } catch (error) {
         console.log("🚀 ~ module.exports.register= ~ error:", error)
         res.status(500).json({msg: error.message})      
@@ -49,12 +50,15 @@ module.exports.login = async (req, res) => {
             return res.status(400).json({msg: 'Invalid email or password'})
         }
 
-        const token = jwt.sign({id: user.id, }, process.env.JWT_SECRET, {expiresIn: '1h'})
+        const token = jwt.sign({id: user.id }, process.env.JWT_SECRET, {expiresIn: "1h"});
+
+        delete user._doc.password; // Password will be removed form the response so that user will not be able to se the password
+
         res.cookie('token', token);
-        res.status(200).json({msg: `{user.name} logged in successfully`});
+        res.status(200).json({token: token, user: user});
         
     } catch (error) {
-        res.status(500).json({msg: error.message})
+        res.status(500).json({msg: error.stack}) // This "error.stack" will give the full detail about the error.
     }
 }
 
@@ -83,7 +87,7 @@ module.exports.profile = async (req, res) => {
     try {
         res.json(req.user)
     } catch (error) {
-        res.status(500).json({msg: error.message})
+        res.status(500).json({msg: error.stack})
     }
 }
 
