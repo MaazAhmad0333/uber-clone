@@ -69,12 +69,15 @@ module.exports.login = async (req, res) => {
 
 module.exports.logout = async (req, res) => {
     try {
-        const token = req.cookie.token;
+        const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
+        if(!token){
+            return res.status(400).json({ msg: "Token not provided" });
+        }
         await blacklisttokenModel.create({token})
         res.clearCookie('token')
         res.send({msg: 'User Logged out successfully'})
     } catch (error) {
-        res.status(500).json({msg: error.message})  
+        return res.status(500).json({msg: error.stack})  
     }
 }
 
